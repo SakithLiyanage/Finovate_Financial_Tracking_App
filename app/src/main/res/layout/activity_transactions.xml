@@ -16,6 +16,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="25dp"
             android:minHeight="?attr/actionBarSize"
             app:layout_scrollFlags="scroll|enterAlways">
 
@@ -29,13 +30,13 @@
 
                 <ImageView
                     android:id="@+id/btnBack"
-                    android:layout_width="48dp"
+                    android:layout_width="0dp"
                     android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/back_button"
                     android:padding="12dp"
                     android:src="@drawable/ic_back"
-                    app:tint="@color/text_primary" />
+                    app:tint="@color/splash_background" />
 
                 <TextView
                     android:layout_width="0dp"
@@ -45,6 +46,17 @@
                     android:text="@string/transactions"
                     android:textColor="@color/text_primary"
                     android:textSize="18sp" />
+
+                <ImageView
+                    android:id="@+id/btnAddTransaction"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginRight="20dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/add_transaction"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_add"
+                    app:tint="@color/primary" />
 
             </LinearLayout>
         </androidx.appcompat.widget.Toolbar>

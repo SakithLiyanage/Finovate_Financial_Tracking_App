@@ -1,5 +1,8 @@
 package com.example.finovate
 
+import android.animation.ArgbEvaluator
+import android.animation.ValueAnimator
+import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -10,6 +13,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -17,12 +21,13 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
-import android.animation.ArgbEvaluator
-import android.animation.ValueAnimator
+import kotlin.collections.HashMap
 
 class HomeActivity : AppCompatActivity() {
 
@@ -44,7 +49,7 @@ class HomeActivity : AppCompatActivity() {
     private var currentBalance: Double = 0.0
     private var totalIncome: Double = 0.0
     private var totalExpenses: Double = 0.0
-    private var monthlyBudget: Double = 1200.00 // Default budget
+    private var monthlyBudget: Double = 120000.00 // Default budget in LKR
 
     // Lists for RecyclerViews
     private lateinit var categoryList: ArrayList<Category>
@@ -59,6 +64,16 @@ class HomeActivity : AppCompatActivity() {
     // Notification constants
     private val CHANNEL_ID = "finovate_channel"
     private val NOTIFICATION_ID = 101
+
+    // Activity result handler for adding/editing transactions
+    private val addTransactionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            // Refresh data after add/edit
+            loadUserData()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -147,121 +162,179 @@ class HomeActivity : AppCompatActivity() {
         updateUI()
     }
 
-
     private fun loadTransactions() {
-        // Here you would load transactions from SharedPreferences
-        // For now, we'll use sample data with LKR values
+        try {
+            // Load transactions from SharedPreferences
+            val sharedPrefs = getSharedPreferences("finovate_transactions", MODE_PRIVATE)
+            val transactionsJson = sharedPrefs.getString("transactions_data", null)
 
-        transactionList = ArrayList()
+            // Initialize the list
+            transactionList = ArrayList()
 
-        // Add some sample transactions (in LKR)
-        transactionList.add(
-            Transaction(
-                id = UUID.randomUUID().toString(),
-                title = "Salary Deposit",
-                amount = 300000.00, // LKR 300,000
-                type = TransactionType.INCOME,
-                category = "Salary",
-                date = Date(),
-                notes = "Monthly salary"
-            )
-        )
+            if (!transactionsJson.isNullOrEmpty()) {
+                val listType = object : TypeToken<ArrayList<Transaction>>() {}.type
+                val loadedTransactions: ArrayList<Transaction> = Gson().fromJson(transactionsJson, listType)
 
-        transactionList.add(
-            Transaction(
-                id = UUID.randomUUID().toString(),
-                title = "Grocery Shopping",
-                amount = 8575.00, // LKR 8,575
-                type = TransactionType.EXPENSE,
-                category = "Food",
-                date = Date(System.currentTimeMillis() - 86400000), // Yesterday
-                notes = "Weekly groceries"
-            )
-        )
+                // Add all loaded transactions to our list
+                transactionList.addAll(loadedTransactions)
+            }
 
-        transactionList.add(
-            Transaction(
-                id = UUID.randomUUID().toString(),
-                title = "Electricity Bill",
-                amount = 12050.00, // LKR 12,050
-                type = TransactionType.EXPENSE,
-                category = "Bills",
-                date = Date(System.currentTimeMillis() - 172800000), // 2 days ago
-                notes = "Monthly electricity bill"
-            )
-        )
+            // If no transactions exist yet, display a friendly message
+            if (transactionList.isEmpty()) {
+                // Create a welcome transaction as a placeholder
+                transactionList.add(
+                    Transaction(
+                        id = "welcome",
+                        title = "Welcome, ${tvUserName.text}!",
+                        amount = 0.0,
+                        type = TransactionType.INCOME,
+                        category = "Info",
+                        date = Date(),
+                        notes = "Add your first transaction to get started"
+                    )
+                )
+            }
 
-        transactionList.add(
-            Transaction(
-                id = UUID.randomUUID().toString(),
-                title = "Freelance Work",
-                amount = 45000.00, // LKR 45,000
-                type = TransactionType.INCOME,
-                category = "Freelance",
-                date = Date(System.currentTimeMillis() - 259200000), // 3 days ago
-                notes = "Website design project"
-            )
-        )
+            // Sort transactions by date (most recent first)
+            transactionList.sortByDescending { it.date }
 
-        transactionList.add(
-            Transaction(
-                id = UUID.randomUUID().toString(),
-                title = "Restaurant Dinner",
-                amount = 6540.00, // LKR 6,540
-                type = TransactionType.EXPENSE,
-                category = "Food",
-                date = Date(System.currentTimeMillis() - 432000000), // 5 days ago
-                notes = "Dinner with friends"
-            )
-        )
+            // Take only the most recent transactions for the home screen (up to 5)
+            val recentTransactions = transactionList.take(5)
 
-        // Set up the transactions recycler view
-        val adapter = TransactionAdapter(transactionList, currencyFormatter) { transaction ->
-            // Handle transaction click - open details/edit
-            Toast.makeText(this, "Transaction: ${transaction.title}", Toast.LENGTH_SHORT).show()
+            // Set up the transactions recycler view
+            val adapter = TransactionAdapter(recentTransactions, currencyFormatter) { transaction ->
+                // Handle transaction click - open details/edit
+                if (transaction.id != "welcome") {
+                    val intent = Intent(this, AddTransactionActivity::class.java)
+                    intent.putExtra("TRANSACTION_ID", transaction.id)
+                    intent.putExtra("IS_EDIT_MODE", true)
+                    addTransactionLauncher.launch(intent)
+                } else {
+                    // If it's the welcome transaction, go to add transaction screen
+                    val intent = Intent(this, AddTransactionActivity::class.java)
+                    addTransactionLauncher.launch(intent)
+                }
+            }
+
+            transactionsRecyclerView.layoutManager = LinearLayoutManager(this)
+            transactionsRecyclerView.adapter = adapter
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "Error loading transactions", Toast.LENGTH_SHORT).show()
+            transactionList = ArrayList()
         }
-
-        transactionsRecyclerView.layoutManager = LinearLayoutManager(this)
-        transactionsRecyclerView.adapter = adapter
     }
 
     private fun loadCategories() {
-        // Here you would load categories from SharedPreferences
-        // For now, we'll use sample data with values in LKR
+        try {
+            categoryList = ArrayList()
 
-        categoryList = ArrayList()
+            // Group transactions by category and calculate total for each
+            val categoryTotals = HashMap<String, Double>()
+            val categoryColors = HashMap<String, Int>()
+            val categoryIcons = HashMap<String, Int>()
 
-        // Sample categories with calculated amounts in LKR
-        categoryList.add(Category("Food", 15115.00, R.color.category_food, R.drawable.ic_food))
-        categoryList.add(Category("Bills", 12050.00, R.color.category_bills, R.drawable.ic_bills))
-        categoryList.add(Category("Transport", 8500.00, R.color.category_transport, R.drawable.ic_transport))
-        categoryList.add(Category("Shopping", 21030.00, R.color.category_shopping, R.drawable.ic_shopping))
-        categoryList.add(Category("Entertainment", 7500.00, R.color.category_entertainment, R.drawable.ic_entertainment))
-        categoryList.add(Category("Health", 4500.00, R.color.category_health, R.drawable.ic_health))
+            // Define default colors and icons for categories
+            setupCategoryDefaults(categoryColors, categoryIcons)
 
-        // Set up the categories recycler view
-        val adapter = CategoryAdapter(categoryList, currencyFormatter) { category ->
-            // Handle category click - show category details
-            Toast.makeText(this, "Category: ${category.name}", Toast.LENGTH_SHORT).show()
+            // Process transactions to calculate category totals
+            for (transaction in transactionList) {
+                if (transaction.type == TransactionType.EXPENSE && transaction.id != "welcome") {
+                    val category = transaction.category
+                    categoryTotals[category] = (categoryTotals[category] ?: 0.0) + transaction.amount
+                }
+            }
+
+            // Create category objects from the calculated totals
+            categoryTotals.forEach { (category, amount) ->
+                categoryList.add(
+                    Category(
+                        name = category,
+                        amount = amount,
+                        colorResId = categoryColors[category] ?: R.color.primary,
+                        iconResId = categoryIcons[category] ?: R.drawable.ic_category
+                    )
+                )
+            }
+
+            // Sort categories by amount (highest first)
+            categoryList.sortByDescending { it.amount }
+
+            // Set up the categories recycler view
+            val adapter = CategoryAdapter(categoryList, currencyFormatter) { category ->
+                // Handle category click - filter transactions by this category
+                val intent = Intent(this, TransactionsActivity::class.java)
+                intent.putExtra("FILTER_CATEGORY", category.name)
+                startActivity(intent)
+            }
+
+            categoriesRecyclerView.layoutManager =
+                LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+            categoriesRecyclerView.adapter = adapter
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "Error loading categories", Toast.LENGTH_SHORT).show()
+            categoryList = ArrayList()
         }
+    }
 
-        categoriesRecyclerView.layoutManager =
-            LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        categoriesRecyclerView.adapter = adapter
+    // Helper method to set up default category mappings
+    private fun setupCategoryDefaults(
+        categoryColors: HashMap<String, Int>,
+        categoryIcons: HashMap<String, Int>
+    ) {
+        // Add mappings for common categories
+        categoryColors["Food"] = R.color.category_food
+        categoryIcons["Food"] = R.drawable.ic_food
+
+        categoryColors["Bills"] = R.color.category_bills
+        categoryIcons["Bills"] = R.drawable.ic_bills
+
+        categoryColors["Transport"] = R.color.category_transport
+        categoryIcons["Transport"] = R.drawable.ic_transport
+
+        categoryColors["Shopping"] = R.color.category_shopping
+        categoryIcons["Shopping"] = R.drawable.ic_shopping
+
+        categoryColors["Entertainment"] = R.color.category_entertainment
+        categoryIcons["Entertainment"] = R.drawable.ic_entertainment
+
+        categoryColors["Health"] = R.color.category_health
+        categoryIcons["Health"] = R.drawable.ic_health
+
+        categoryColors["Salary"] = R.color.income_green
+        categoryIcons["Salary"] = R.drawable.ic_income
+
+        categoryColors["Freelance"] = R.color.income_green
+        categoryIcons["Freelance"] = R.drawable.ic_income
+
+        // Add more category mappings as needed
     }
 
     private fun loadBudget() {
-        // Load budget from SharedPreferences (in LKR)
+        // Load budget from SharedPreferences
         val sharedPrefs = getSharedPreferences("finovate_budget", Context.MODE_PRIVATE)
-        monthlyBudget = sharedPrefs.getFloat("monthly_budget", 120000.00f).toDouble() // LKR 120,000
+
+        // Default to 120,000 LKR if not set
+        monthlyBudget = sharedPrefs.getFloat("monthly_budget", 120000.00f).toDouble()
+
+        // If this is the first time, save the default budget
+        if (!sharedPrefs.contains("monthly_budget")) {
+            val editor = sharedPrefs.edit()
+            editor.putFloat("monthly_budget", 120000.00f)
+            editor.apply()
+        }
     }
 
     private fun calculateBalances() {
         totalIncome = 0.0
         totalExpenses = 0.0
 
-        // Calculate totals from transaction list
+        // Calculate totals from actual transaction list
         for (transaction in transactionList) {
+            // Skip the welcome transaction if it exists
+            if (transaction.id == "welcome") continue
+
             if (transaction.type == TransactionType.INCOME) {
                 totalIncome += transaction.amount
             } else {
@@ -287,7 +360,7 @@ class HomeActivity : AppCompatActivity() {
 
         // Update budget progress bar
         val budgetProgress = findViewById<android.widget.ProgressBar>(R.id.budgetProgressBar)
-        val progressPercentage = (totalExpenses / monthlyBudget * 100).toInt()
+        val progressPercentage = if (monthlyBudget > 0) (totalExpenses / monthlyBudget * 100).toInt() else 0
         budgetProgress.progress = progressPercentage
 
         // Set progress bar color based on budget status
@@ -324,15 +397,17 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun checkBudgetStatus() {
-        val budgetPercentage = (totalExpenses / monthlyBudget) * 100
+        if (monthlyBudget > 0) {
+            val budgetPercentage = (totalExpenses / monthlyBudget) * 100
 
-        // If budget exceeded 90%, show notification
-        if (budgetPercentage >= 90) {
-            showBudgetWarningNotification()
-        }
-        // If budget exceeded 75%, show in-app warning
-        else if (budgetPercentage >= 75) {
-            showBudgetWarningDialog()
+            // If budget exceeded 90%, show notification
+            if (budgetPercentage >= 90) {
+                showBudgetWarningNotification()
+            }
+            // If budget exceeded 75%, show in-app warning
+            else if (budgetPercentage >= 75) {
+                showBudgetWarningDialog()
+            }
         }
     }
 
@@ -427,9 +502,22 @@ class HomeActivity : AppCompatActivity() {
     private fun setupClickListeners() {
         // Add new transaction button in toolbar
         btnAddTransaction.setOnClickListener {
-            // Open add transaction activity/dialog
-            val intent = Intent(this, AddTransactionActivity::class.java)
-            startActivity(intent)
+            // Open add transaction activity with animation
+            btnAddTransaction.animate()
+                .scaleX(0.85f)
+                .scaleY(0.85f)
+                .setDuration(100)
+                .withEndAction {
+                    btnAddTransaction.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(100)
+                        .start()
+
+                    val intent = Intent(this, AddTransactionActivity::class.java)
+                    addTransactionLauncher.launch(intent)
+                }
+                .start()
         }
 
         // Profile button
@@ -453,7 +541,8 @@ class HomeActivity : AppCompatActivity() {
         val btnViewAllTransactions = findViewById<TextView>(R.id.btnViewAllTransactions)
         btnViewAllTransactions.setOnClickListener {
             // Open transactions screen
-            Toast.makeText(this, "View all transactions", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, TransactionsActivity::class.java)
+            startActivity(intent)
         }
     }
 
@@ -465,8 +554,8 @@ class HomeActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_transactions -> {
-                    // Navigate to transactions
-                    Toast.makeText(this, "Transactions", Toast.LENGTH_SHORT).show()
+                    val intent = Intent(this, TransactionsActivity::class.java)
+                    startActivity(intent)
                     true
                 }
                 R.id.nav_budget -> {
@@ -498,29 +587,13 @@ class HomeActivity : AppCompatActivity() {
         // Code for restoring data from internal storage
         Toast.makeText(this, "Restoring data...", Toast.LENGTH_SHORT).show()
     }
+
+    override fun onResume() {
+        super.onResume()
+        // Reload all data to reflect any changes made in other activities
+        loadUserData()
+    }
 }
-
-data class Transaction(
-    val id: String,
-    val title: String,
-    val amount: Double,
-    val type: TransactionType,
-    val category: String,
-    val date: Date,
-    val notes: String? = null
-)
-
-enum class TransactionType {
-    INCOME,
-    EXPENSE
-}
-
-data class Category(
-    val name: String,
-    val amount: Double,
-    val colorResId: Int,
-    val iconResId: Int
-)
 
 class TransactionAdapter(
     private val transactions: List<Transaction>,
@@ -615,3 +688,12 @@ class CategoryAdapter(
         }
     }
 }
+
+
+
+data class Category(
+    val name: String,
+    val amount: Double,
+    val colorResId: Int,
+    val iconResId: Int
+)

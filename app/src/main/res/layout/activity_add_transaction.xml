@@ -16,6 +16,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
+            android:layout_marginTop="30dp"
             android:background="@color/white"
             app:title="Add Transaction"
             app:titleTextColor="@color/text_primary" />
@@ -58,7 +59,7 @@
                     android:layout_height="wrap_content"
                     android:text="Income"
                     android:textColor="@color/income_green"
-                    app:chipBackgroundColor="@color/primary_light"
+                    app:chipBackgroundColor="@color/background"
                     app:chipStrokeColor="@color/income_green"
                     app:chipStrokeWidth="1dp" />
 
@@ -69,7 +70,7 @@
                     android:layout_height="wrap_content"
                     android:text="Expense"
                     android:textColor="@color/expense_red"
-                    app:chipBackgroundColor="@color/primary_light"
+                    app:chipBackgroundColor="@color/background"
                     app:chipStrokeColor="@color/expense_red"
                     app:chipStrokeWidth="1dp" />
             </com.google.android.material.chip.ChipGroup>
@@ -86,7 +87,9 @@
                 app:boxCornerRadiusBottomStart="12dp"
                 app:boxCornerRadiusTopEnd="12dp"
                 app:boxCornerRadiusTopStart="12dp"
-                app:hintTextColor="@color/primary">
+                app:boxStrokeColor="@color/primary"
+                app:hintTextColor="@color/primary"
+                app:startIconTint="@color/primary">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etTitle"
@@ -94,7 +97,8 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/inter"
                     android:inputType="text"
-                    android:maxLines="1" />
+                    android:maxLines="1"
+                    android:textColor="@color/text_primary" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Amount -->
@@ -109,15 +113,18 @@
                 app:boxCornerRadiusBottomStart="12dp"
                 app:boxCornerRadiusTopEnd="12dp"
                 app:boxCornerRadiusTopStart="12dp"
+                app:boxStrokeColor="@color/primary"
                 app:hintTextColor="@color/primary"
-                app:prefixText="LKR ">
+                app:prefixText="LKR "
+                app:startIconTint="@color/primary">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etAmount"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/inter"
-                    android:inputType="numberDecimal" />
+                    android:inputType="numberDecimal"
+                    android:textColor="@color/text_primary" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Date -->
@@ -132,8 +139,9 @@
                 app:boxCornerRadiusBottomStart="12dp"
                 app:boxCornerRadiusTopEnd="12dp"
                 app:boxCornerRadiusTopStart="12dp"
+                app:boxStrokeColor="@color/primary"
                 app:hintTextColor="@color/primary"
-                app:startIconDrawable="@drawable/ic_calendar">
+                app:startIconTint="@color/primary">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etDate"
@@ -142,7 +150,8 @@
                     android:clickable="true"
                     android:focusable="false"
                     android:fontFamily="@font/inter"
-                    android:inputType="none" />
+                    android:inputType="none"
+                    android:textColor="@color/text_primary" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Category -->
@@ -177,7 +186,11 @@
                 app:boxCornerRadiusBottomStart="12dp"
                 app:boxCornerRadiusTopEnd="12dp"
                 app:boxCornerRadiusTopStart="12dp"
-                app:hintTextColor="@color/primary">
+                app:boxStrokeColor="@color/primary"
+                app:counterEnabled="true"
+                app:counterMaxLength="200"
+                app:hintTextColor="@color/primary"
+                app:startIconTint="@color/primary">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etNotes"
@@ -186,7 +199,9 @@
                     android:fontFamily="@font/inter"
                     android:gravity="top"
                     android:inputType="textMultiLine"
-                    android:lines="3" />
+                    android:lines="3"
+                    android:maxLength="200"
+                    android:textColor="@color/text_primary" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Buttons -->

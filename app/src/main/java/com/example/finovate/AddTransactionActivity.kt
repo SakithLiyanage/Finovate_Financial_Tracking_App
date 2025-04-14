@@ -128,6 +128,7 @@ class AddTransactionActivity : AppCompatActivity() {
         }
     }
 
+
     private fun loadTransactionDetails() {
         val transaction = transactionsList.find { it.id == currentTransactionId }
         if (transaction != null) {
