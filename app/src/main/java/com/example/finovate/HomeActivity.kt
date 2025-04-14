@@ -649,8 +649,8 @@ class HomeActivity : AppCompatActivity() {
                         true
                     }
                     R.id.nav_reports -> {
-                        // Navigate to reports
-                        Toast.makeText(this, "Reports feature coming soon", Toast.LENGTH_SHORT).show()
+                        val intent = Intent(this, ReportsActivity::class.java)
+                        startActivity(intent)
                         true
                     }
                     else -> false

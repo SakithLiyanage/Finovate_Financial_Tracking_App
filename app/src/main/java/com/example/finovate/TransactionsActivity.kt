@@ -252,7 +252,8 @@ class TransactionsActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_reports -> {
-                    // Navigate to reports (to be implemented)
+                    val intent = Intent(this, ReportsActivity::class.java)
+                    startActivity(intent)
                     true
                 }
                 else -> false

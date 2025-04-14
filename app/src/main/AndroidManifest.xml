@@ -15,6 +15,9 @@
         android:theme="@style/Theme.Finovate"
         tools:targetApi="31">
         <activity
+            android:name=".ReportsActivity"
+            android:exported="false" />
+        <activity
             android:name=".BudgetActivity"
             android:exported="false" />
         <activity
