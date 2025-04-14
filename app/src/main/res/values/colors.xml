@@ -32,6 +32,9 @@
     <color name="category_shopping">#AF52DE</color>
     <color name="category_entertainment">#FF9500</color>
     <color name="category_health">#00C8D6</color>
+    <color name="category_other">#0040D6</color>
+
+
 
     <color name="background_light">#F5F5F5</color>
     <color name="divider">#E0E0E0</color>

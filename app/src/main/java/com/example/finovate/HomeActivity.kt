@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
@@ -31,13 +32,13 @@ import kotlin.collections.HashMap
 
 class HomeActivity : AppCompatActivity() {
 
+    private val TAG = "HomeActivity"
+
+    // Core UI Elements
     private lateinit var tvUserName: TextView
     private lateinit var tvCurrentBalance: TextView
     private lateinit var tvIncome: TextView
     private lateinit var tvExpenses: TextView
-    private lateinit var tvBudgetAmount: TextView
-    private lateinit var tvBudgetUsed: TextView
-    private lateinit var tvBudgetRemaining: TextView
     private lateinit var categoriesRecyclerView: RecyclerView
     private lateinit var transactionsRecyclerView: RecyclerView
     private lateinit var btnAddTransaction: ImageView
@@ -45,11 +46,19 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var btnProfile: ImageView
     private lateinit var bottomNavigationView: BottomNavigationView
 
+    // Budget UI Elements
+    private lateinit var tvTotalBudget: TextView
+    private lateinit var tvBudgetUsed: TextView
+    private lateinit var tvBudgetRemaining: TextView
+    private lateinit var budgetProgressBar: android.widget.ProgressBar
+    private lateinit var viewBudgetDetails: TextView
+
     // Financial data
     private var currentBalance: Double = 0.0
     private var totalIncome: Double = 0.0
     private var totalExpenses: Double = 0.0
     private var monthlyBudget: Double = 120000.00 // Default budget in LKR
+    private var totalSpent: Double = 0.0          // Current month expenses
 
     // Lists for RecyclerViews
     private lateinit var categoryList: ArrayList<Category>
@@ -117,19 +126,28 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        tvUserName = findViewById(R.id.tvUserName)
-        tvCurrentBalance = findViewById(R.id.tvCurrentBalance)
-        tvIncome = findViewById(R.id.tvIncome)
-        tvExpenses = findViewById(R.id.tvExpenses)
-        tvBudgetAmount = findViewById(R.id.tvBudgetAmount)
-        tvBudgetUsed = findViewById(R.id.tvBudgetUsed)
-        tvBudgetRemaining = findViewById(R.id.tvBudgetRemaining)
-        categoriesRecyclerView = findViewById(R.id.categoriesRecyclerView)
-        transactionsRecyclerView = findViewById(R.id.transactionsRecyclerView)
-        btnAddTransaction = findViewById(R.id.btnAddTransaction)
-        btnNotifications = findViewById(R.id.btnNotifications)
-        btnProfile = findViewById(R.id.btnProfile)
-        bottomNavigationView = findViewById(R.id.bottomNavigationView)
+        try {
+            tvUserName = findViewById(R.id.tvUserName)
+            tvCurrentBalance = findViewById(R.id.tvCurrentBalance)
+            tvIncome = findViewById(R.id.tvIncome)
+            tvExpenses = findViewById(R.id.tvExpenses)
+            categoriesRecyclerView = findViewById(R.id.categoriesRecyclerView)
+            transactionsRecyclerView = findViewById(R.id.transactionsRecyclerView)
+            btnAddTransaction = findViewById(R.id.btnAddTransaction)
+            btnNotifications = findViewById(R.id.btnNotifications)
+            btnProfile = findViewById(R.id.btnProfile)
+            bottomNavigationView = findViewById(R.id.bottomNavigationView)
+
+            // Budget UI elements
+            tvTotalBudget = findViewById(R.id.tvTotalBudget)
+            tvBudgetUsed = findViewById(R.id.tvBudgetUsed)
+            tvBudgetRemaining = findViewById(R.id.tvBudgetRemaining)
+            budgetProgressBar = findViewById(R.id.budgetProgressBar)
+            viewBudgetDetails = findViewById(R.id.viewBudgetDetails)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error initializing views", e)
+        }
     }
 
     private fun loadUserName() {
@@ -158,6 +176,9 @@ class HomeActivity : AppCompatActivity() {
         // Calculate balances
         calculateBalances()
 
+        // Calculate current month spending
+        calculateCurrentMonthSpending()
+
         // Update UI with data
         updateUI()
     }
@@ -177,6 +198,9 @@ class HomeActivity : AppCompatActivity() {
 
                 // Add all loaded transactions to our list
                 transactionList.addAll(loadedTransactions)
+                Log.d(TAG, "Loaded ${transactionList.size} transactions")
+            } else {
+                Log.d(TAG, "No transactions found")
             }
 
             // If no transactions exist yet, display a friendly message
@@ -219,7 +243,7 @@ class HomeActivity : AppCompatActivity() {
             transactionsRecyclerView.layoutManager = LinearLayoutManager(this)
             transactionsRecyclerView.adapter = adapter
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Error loading transactions", e)
             Toast.makeText(this, "Error loading transactions", Toast.LENGTH_SHORT).show()
             transactionList = ArrayList()
         }
@@ -272,9 +296,112 @@ class HomeActivity : AppCompatActivity() {
                 LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
             categoriesRecyclerView.adapter = adapter
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Error loading categories", e)
             Toast.makeText(this, "Error loading categories", Toast.LENGTH_SHORT).show()
             categoryList = ArrayList()
+        }
+    }
+
+    private fun loadBudget() {
+        try {
+            // Load budget from SharedPreferences
+            val sharedPrefs = getSharedPreferences("finovate_budget", Context.MODE_PRIVATE)
+
+            // Default to 120,000 LKR if not set
+            monthlyBudget = sharedPrefs.getFloat("monthly_budget", 120000.00f).toDouble()
+
+            Log.d(TAG, "Loaded monthly budget: $monthlyBudget LKR")
+
+            // If this is the first time, save the default budget
+            if (!sharedPrefs.contains("monthly_budget")) {
+                val editor = sharedPrefs.edit()
+                editor.putFloat("monthly_budget", 120000.00f)
+                editor.apply()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading budget data", e)
+            monthlyBudget = 120000.00 // Fallback to default
+        }
+    }
+
+    private fun calculateBalances() {
+        totalIncome = 0.0
+        totalExpenses = 0.0
+
+        // Calculate totals from actual transaction list
+        for (transaction in transactionList) {
+            // Skip the welcome transaction if it exists
+            if (transaction.id == "welcome") continue
+
+            if (transaction.type == TransactionType.INCOME) {
+                totalIncome += transaction.amount
+            } else {
+                totalExpenses += transaction.amount
+            }
+        }
+
+        // Calculate current balance
+        currentBalance = totalIncome - totalExpenses
+    }
+
+    private fun calculateCurrentMonthSpending() {
+        try {
+            totalSpent = 0.0
+
+            // Get current month and year
+            val calendar = Calendar.getInstance()
+            val currentMonth = calendar.get(Calendar.MONTH)
+            val currentYear = calendar.get(Calendar.YEAR)
+
+            // Filter transactions for current month and sum expenses
+            for (transaction in transactionList) {
+                if (transaction.id == "welcome") continue
+
+                val transactionCalendar = Calendar.getInstance()
+                transactionCalendar.time = transaction.date
+
+                if (transactionCalendar.get(Calendar.MONTH) == currentMonth &&
+                    transactionCalendar.get(Calendar.YEAR) == currentYear &&
+                    transaction.type == TransactionType.EXPENSE) {
+
+                    totalSpent += transaction.amount
+                }
+            }
+
+            Log.d(TAG, "Current month spending: $totalSpent LKR out of $monthlyBudget LKR budget")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error calculating current month spending", e)
+        }
+    }
+
+    private fun updateUI() {
+        try {
+            // Update balance texts with LKR currency
+            tvCurrentBalance.text = currencyFormatter.format(currentBalance)
+            tvIncome.text = currencyFormatter.format(totalIncome)
+            tvExpenses.text = currencyFormatter.format(totalExpenses)
+
+            // Update budget information with LKR currency
+            tvTotalBudget.text = currencyFormatter.format(monthlyBudget)
+            tvBudgetUsed.text = "${currencyFormatter.format(totalSpent)} used"
+
+            val remaining = monthlyBudget - totalSpent
+            tvBudgetRemaining.text = "${currencyFormatter.format(remaining)} remaining"
+
+            // Update budget progress bar
+            val progressPercentage = if (monthlyBudget > 0) (totalSpent / monthlyBudget * 100).toInt() else 0
+            budgetProgressBar.progress = progressPercentage
+
+            // Set progress bar color based on budget status
+            if (progressPercentage > 90) {
+                budgetProgressBar.progressDrawable = getDrawable(R.drawable.progress_bar_red)
+            } else if (progressPercentage > 75) {
+                budgetProgressBar.progressDrawable = getDrawable(R.drawable.progress_bar_orange)
+            } else {
+                budgetProgressBar.progressDrawable = getDrawable(R.drawable.progress_bar_blue)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating UI", e)
         }
     }
 
@@ -311,71 +438,6 @@ class HomeActivity : AppCompatActivity() {
         // Add more category mappings as needed
     }
 
-    private fun loadBudget() {
-        // Load budget from SharedPreferences
-        val sharedPrefs = getSharedPreferences("finovate_budget", Context.MODE_PRIVATE)
-
-        // Default to 120,000 LKR if not set
-        monthlyBudget = sharedPrefs.getFloat("monthly_budget", 120000.00f).toDouble()
-
-        // If this is the first time, save the default budget
-        if (!sharedPrefs.contains("monthly_budget")) {
-            val editor = sharedPrefs.edit()
-            editor.putFloat("monthly_budget", 120000.00f)
-            editor.apply()
-        }
-    }
-
-    private fun calculateBalances() {
-        totalIncome = 0.0
-        totalExpenses = 0.0
-
-        // Calculate totals from actual transaction list
-        for (transaction in transactionList) {
-            // Skip the welcome transaction if it exists
-            if (transaction.id == "welcome") continue
-
-            if (transaction.type == TransactionType.INCOME) {
-                totalIncome += transaction.amount
-            } else {
-                totalExpenses += transaction.amount
-            }
-        }
-
-        // Calculate current balance
-        currentBalance = totalIncome - totalExpenses
-    }
-
-    private fun updateUI() {
-        // Update balance texts with LKR currency
-        tvCurrentBalance.text = currencyFormatter.format(currentBalance)
-        tvIncome.text = currencyFormatter.format(totalIncome)
-        tvExpenses.text = currencyFormatter.format(totalExpenses)
-
-        // Update budget information with LKR currency
-        tvBudgetAmount.text = currencyFormatter.format(monthlyBudget)
-        tvBudgetUsed.text = "${currencyFormatter.format(totalExpenses)} used"
-        val remaining = monthlyBudget - totalExpenses
-        tvBudgetRemaining.text = "${currencyFormatter.format(remaining)} remaining"
-
-        // Update budget progress bar
-        val budgetProgress = findViewById<android.widget.ProgressBar>(R.id.budgetProgressBar)
-        val progressPercentage = if (monthlyBudget > 0) (totalExpenses / monthlyBudget * 100).toInt() else 0
-        budgetProgress.progress = progressPercentage
-
-        // Set progress bar color based on budget status
-        if (progressPercentage > 90) {
-            budgetProgress.progressTintList =
-                ContextCompat.getColorStateList(this, R.color.expense_red)
-        } else if (progressPercentage > 75) {
-            budgetProgress.progressTintList =
-                ContextCompat.getColorStateList(this, R.color.warning_orange)
-        } else {
-            budgetProgress.progressTintList =
-                ContextCompat.getColorStateList(this, R.color.primary)
-        }
-    }
-
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
@@ -398,7 +460,7 @@ class HomeActivity : AppCompatActivity() {
 
     private fun checkBudgetStatus() {
         if (monthlyBudget > 0) {
-            val budgetPercentage = (totalExpenses / monthlyBudget) * 100
+            val budgetPercentage = (totalSpent / monthlyBudget) * 100
 
             // If budget exceeded 90%, show notification
             if (budgetPercentage >= 90) {
@@ -417,7 +479,7 @@ class HomeActivity : AppCompatActivity() {
             val notificationBuilder = NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_alert) // Use system icon instead of custom one
                 .setContentTitle("Budget Alert!")
-                .setContentText("You've used ${(totalExpenses / monthlyBudget * 100).toInt()}% of your monthly budget.")
+                .setContentText("You've used ${(totalSpent / monthlyBudget * 100).toInt()}% of your monthly budget.")
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
 
             val notificationManager =
@@ -431,7 +493,7 @@ class HomeActivity : AppCompatActivity() {
                 // Fallback to toast if notification fails
                 Toast.makeText(
                     this,
-                    "Budget Alert: You've used ${(totalExpenses / monthlyBudget * 100).toInt()}% of your monthly budget.",
+                    "Budget Alert: You've used ${(totalSpent / monthlyBudget * 100).toInt()}% of your monthly budget.",
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -441,151 +503,165 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun showBudgetWarningDialog() {
-        MaterialAlertDialogBuilder(this)
-            .setTitle("Budget Warning")
-            .setMessage("You've used ${(totalExpenses / monthlyBudget * 100).toInt()}% of your monthly budget.")
-            .setPositiveButton("Adjust Budget") { _, _ ->
-                // Open budget settings
-                Toast.makeText(this, "Opening budget settings...", Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton("Dismiss") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .show()
+        try {
+            MaterialAlertDialogBuilder(this)
+                .setTitle("Budget Warning")
+                .setMessage("You've used ${(totalSpent / monthlyBudget * 100).toInt()}% of your monthly budget.")
+                .setPositiveButton("Adjust Budget") { _, _ ->
+                    // Open budget settings
+                    val intent = Intent(this, BudgetActivity::class.java)
+                    startActivity(intent)
+                }
+                .setNegativeButton("Dismiss") { dialog, _ ->
+                    dialog.dismiss()
+                }
+                .show()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing budget warning dialog", e)
+        }
     }
 
     private fun setupToolbarColorChangeOnScroll() {
-        val nestedScrollView = findViewById<androidx.core.widget.NestedScrollView>(R.id.nestedScrollView)
-        val appBarLayout = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.appBarLayout)
+        try {
+            val nestedScrollView = findViewById<androidx.core.widget.NestedScrollView>(R.id.nestedScrollView)
+            val appBarLayout = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.appBarLayout)
 
-        val initialColor = ContextCompat.getColor(this, R.color.white)
-        val scrolledColor = ContextCompat.getColor(this, R.color.primary_variant)
+            val initialColor = ContextCompat.getColor(this, R.color.white)
+            val scrolledColor = ContextCompat.getColor(this, R.color.primary_variant)
 
-        // Initial color
-        appBarLayout.setBackgroundColor(initialColor)
+            // Initial color
+            appBarLayout.setBackgroundColor(initialColor)
 
-        var isColorChanged = false
+            var isColorChanged = false
 
-        nestedScrollView.setOnScrollChangeListener { v, scrollX, scrollY, oldScrollX, oldScrollY ->
-            if (scrollY > 30 && !isColorChanged) {  // User has scrolled down (threshold of 30px)
-                // Animate color change to secondary
-                val colorAnimation = ValueAnimator.ofObject(
-                    ArgbEvaluator(),
-                    initialColor,
-                    scrolledColor
-                )
+            nestedScrollView.setOnScrollChangeListener { v, scrollX, scrollY, oldScrollX, oldScrollY ->
+                if (scrollY > 30 && !isColorChanged) {  // User has scrolled down (threshold of 30px)
+                    // Animate color change to secondary
+                    val colorAnimation = ValueAnimator.ofObject(
+                        ArgbEvaluator(),
+                        initialColor,
+                        scrolledColor
+                    )
 
-                colorAnimation.duration = 300 // milliseconds
-                colorAnimation.addUpdateListener { animator ->
-                    appBarLayout.setBackgroundColor(animator.animatedValue as Int)
+                    colorAnimation.duration = 300 // milliseconds
+                    colorAnimation.addUpdateListener { animator ->
+                        appBarLayout.setBackgroundColor(animator.animatedValue as Int)
+                    }
+                    colorAnimation.start()
+                    isColorChanged = true
+                } else if (scrollY <= 30 && isColorChanged) {  // User scrolled back to top
+                    // Animate color change back to white
+                    val colorAnimation = ValueAnimator.ofObject(
+                        ArgbEvaluator(),
+                        scrolledColor,
+                        initialColor
+                    )
+
+                    colorAnimation.duration = 300 // milliseconds
+                    colorAnimation.addUpdateListener { animator ->
+                        appBarLayout.setBackgroundColor(animator.animatedValue as Int)
+                    }
+                    colorAnimation.start()
+                    isColorChanged = false
                 }
-                colorAnimation.start()
-                isColorChanged = true
-            } else if (scrollY <= 30 && isColorChanged) {  // User scrolled back to top
-                // Animate color change back to white
-                val colorAnimation = ValueAnimator.ofObject(
-                    ArgbEvaluator(),
-                    scrolledColor,
-                    initialColor
-                )
-
-                colorAnimation.duration = 300 // milliseconds
-                colorAnimation.addUpdateListener { animator ->
-                    appBarLayout.setBackgroundColor(animator.animatedValue as Int)
-                }
-                colorAnimation.start()
-                isColorChanged = false
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting up toolbar color change", e)
         }
     }
 
     private fun setupClickListeners() {
-        // Add new transaction button in toolbar
-        btnAddTransaction.setOnClickListener {
-            // Open add transaction activity with animation
-            btnAddTransaction.animate()
-                .scaleX(0.85f)
-                .scaleY(0.85f)
-                .setDuration(100)
-                .withEndAction {
-                    btnAddTransaction.animate()
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .setDuration(100)
-                        .start()
+        try {
+            // Add new transaction button in toolbar
+            btnAddTransaction.setOnClickListener {
+                // Open add transaction activity with animation
+                btnAddTransaction.animate()
+                    .scaleX(0.85f)
+                    .scaleY(0.85f)
+                    .setDuration(100)
+                    .withEndAction {
+                        btnAddTransaction.animate()
+                            .scaleX(1f)
+                            .scaleY(1f)
+                            .setDuration(100)
+                            .start()
 
-                    val intent = Intent(this, AddTransactionActivity::class.java)
-                    addTransactionLauncher.launch(intent)
-                }
-                .start()
-        }
+                        val intent = Intent(this, AddTransactionActivity::class.java)
+                        addTransactionLauncher.launch(intent)
+                    }
+                    .start()
+            }
 
-        // Profile button
-        btnProfile.setOnClickListener {
-            Toast.makeText(this, "Opening profile", Toast.LENGTH_SHORT).show()
-        }
+            // Profile button
+            btnProfile.setOnClickListener {
+                Toast.makeText(this, "Opening profile", Toast.LENGTH_SHORT).show()
+            }
 
-        // Notifications button
-        btnNotifications.setOnClickListener {
-            Toast.makeText(this, "Opening notifications", Toast.LENGTH_SHORT).show()
-        }
+            // Notifications button
+            btnNotifications.setOnClickListener {
+                Toast.makeText(this, "Opening notifications", Toast.LENGTH_SHORT).show()
+            }
 
-        // View all categories
-        val btnViewAllCategories = findViewById<TextView>(R.id.btnViewAllCategories)
-        btnViewAllCategories.setOnClickListener {
-            // Open categories screen
-            Toast.makeText(this, "View all categories", Toast.LENGTH_SHORT).show()
-        }
+            // View all categories
+            val btnViewAllCategories = findViewById<TextView>(R.id.btnViewAllCategories)
+            btnViewAllCategories.setOnClickListener {
+                // Open categories screen or filtered transactions
+                val intent = Intent(this, TransactionsActivity::class.java)
+                startActivity(intent)
+            }
 
-        // View all transactions
-        val btnViewAllTransactions = findViewById<TextView>(R.id.btnViewAllTransactions)
-        btnViewAllTransactions.setOnClickListener {
-            // Open transactions screen
-            val intent = Intent(this, TransactionsActivity::class.java)
-            startActivity(intent)
+            // View all transactions
+            val btnViewAllTransactions = findViewById<TextView>(R.id.btnViewAllTransactions)
+            btnViewAllTransactions.setOnClickListener {
+                // Open transactions screen
+                val intent = Intent(this, TransactionsActivity::class.java)
+                startActivity(intent)
+            }
+
+            // View budget details
+            viewBudgetDetails.setOnClickListener {
+                val intent = Intent(this, BudgetActivity::class.java)
+                startActivity(intent)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting up click listeners", e)
         }
     }
 
     private fun setupBottomNavigation() {
-        bottomNavigationView.setOnItemSelectedListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.nav_home -> {
-                    // Already on home, do nothing
-                    true
+        try {
+            bottomNavigationView.selectedItemId = R.id.nav_home
+
+            bottomNavigationView.setOnItemSelectedListener { menuItem ->
+                when (menuItem.itemId) {
+                    R.id.nav_home -> {
+                        // Already on home, do nothing
+                        true
+                    }
+                    R.id.nav_transactions -> {
+                        val intent = Intent(this, TransactionsActivity::class.java)
+                        startActivity(intent)
+                        true
+                    }
+                    R.id.nav_budget -> {
+                        val intent = Intent(this, BudgetActivity::class.java)
+                        startActivity(intent)
+                        true
+                    }
+                    R.id.nav_reports -> {
+                        // Navigate to reports
+                        Toast.makeText(this, "Reports feature coming soon", Toast.LENGTH_SHORT).show()
+                        true
+                    }
+                    else -> false
                 }
-                R.id.nav_transactions -> {
-                    val intent = Intent(this, TransactionsActivity::class.java)
-                    startActivity(intent)
-                    true
-                }
-                R.id.nav_budget -> {
-                    // Navigate to budget
-                    Toast.makeText(this, "Budget", Toast.LENGTH_SHORT).show()
-                    true
-                }
-                R.id.nav_reports -> {
-                    // Navigate to reports
-                    Toast.makeText(this, "Reports", Toast.LENGTH_SHORT).show()
-                    true
-                }
-                else -> false
             }
+
+            // Set Home as selected
+            bottomNavigationView.selectedItemId = R.id.nav_home
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting up bottom navigation", e)
         }
-
-        // Set Home as selected
-        bottomNavigationView.selectedItemId = R.id.nav_home
-    }
-
-    // Handle data backup functionality
-    private fun backupData() {
-        // Code for backing up data to internal storage
-        Toast.makeText(this, "Backing up data...", Toast.LENGTH_SHORT).show()
-    }
-
-    // Handle data restoration functionality
-    private fun restoreData() {
-        // Code for restoring data from internal storage
-        Toast.makeText(this, "Restoring data...", Toast.LENGTH_SHORT).show()
     }
 
     override fun onResume() {
@@ -688,8 +764,6 @@ class CategoryAdapter(
         }
     }
 }
-
-
 
 data class Category(
     val name: String,

@@ -238,7 +238,8 @@ class TransactionsActivity : AppCompatActivity() {
         bottomNavigationView.setOnItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.nav_home -> {
-                    finish() // Go back to the home activity instead of creating a new one
+                    val intent = Intent(this, HomeActivity::class.java)
+                    startActivity(intent)
                     true
                 }
                 R.id.nav_transactions -> {
@@ -246,7 +247,8 @@ class TransactionsActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_budget -> {
-                    // Navigate to budget (to be implemented)
+                    val intent = Intent(this, BudgetActivity::class.java)
+                    startActivity(intent)
                     true
                 }
                 R.id.nav_reports -> {

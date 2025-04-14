@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/background_light"
+    android:backgroundTint="@color/background"
     tools:context=".HomeActivity">
 
     <com.google.android.material.appbar.AppBarLayout
@@ -230,46 +231,53 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Budget Progress -->
+            <!-- Budget Section -->
             <androidx.cardview.widget.CardView
+                android:id="@+id/budgetCardView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp"
-                android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="@color/white"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp">
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:background="@color/background"
                     android:orientation="vertical"
                     android:padding="16dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
                         android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:contentDescription="Budget Icon"
+                            android:src="@drawable/ic_budget"
+                            app:tint="@color/primary" />
 
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
                             android:layout_weight="1"
                             android:fontFamily="@font/inter_medium"
-                            android:text="@string/monthly_budget"
+                            android:text="Monthly Budget"
                             android:textColor="@color/text_primary"
                             android:textSize="16sp" />
 
                         <TextView
-                            android:id="@+id/tvBudgetAmount"
+                            android:id="@+id/tvTotalBudget"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:fontFamily="@font/inter_medium"
-                            android:text="LKR 1,200.00"
-                            android:textColor="@color/text_primary"
-                            android:textSize="16sp" />
+                            android:fontFamily="@font/inter_bold"
+                            android:textColor="@color/primary"
+                            android:textSize="16sp"
+                            tools:text="LKR 120,000" />
                     </LinearLayout>
 
                     <ProgressBar
@@ -278,14 +286,14 @@
                         android:layout_width="match_parent"
                         android:layout_height="8dp"
                         android:layout_marginTop="12dp"
-                        android:background="@drawable/budget_progress_bg"
-                        android:progress="65"
-                        android:progressTint="@color/primary" />
+                        android:max="100"
+                        android:progress="45"
+                        android:progressDrawable="@drawable/progress_bar_blue" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="6dp"
                         android:orientation="horizontal">
 
                         <TextView
@@ -294,22 +302,34 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:fontFamily="@font/inter"
-                            android:text="LKR 780 used"
                             android:textColor="@color/text_secondary"
-                            android:textSize="12sp" />
+                            android:textSize="14sp"
+                            tools:text="LKR 54,000 used" />
 
                         <TextView
                             android:id="@+id/tvBudgetRemaining"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:fontFamily="@font/inter"
-                            android:text="LKR 420 remaining"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="12sp" />
+                            android:textColor="@color/primary"
+                            android:textSize="14sp"
+                            tools:text="LKR 66,000 remaining" />
                     </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/viewBudgetDetails"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:background="?attr/selectableItemBackground"
+                        android:fontFamily="@font/inter_medium"
+                        android:gravity="center"
+                        android:padding="8dp"
+                        android:text="View Budget Details"
+                        android:textColor="@color/primary"
+                        android:textSize="14sp" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
-
             <!-- Category Section -->
             <LinearLayout
                 android:layout_width="match_parent"
