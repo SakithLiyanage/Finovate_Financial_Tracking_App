@@ -44,10 +44,8 @@ class AddTransactionActivity : AppCompatActivity() {
     private var selectedCategory = ""
     private var transactionsList = ArrayList<Transaction>()
 
-    // Date formatter
     private val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
 
-    // Income and expense categories
     private val incomeCategories = listOf("Salary", "Freelance", "Investments", "Gifts", "Other Income")
     private val expenseCategories = listOf("Food", "Transport", "Shopping", "Bills", "Health", "Education", "Entertainment", "Other")
 
@@ -55,23 +53,18 @@ class AddTransactionActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_transaction)
 
-        // Initialize views
         initViews()
 
-        // Load transactions data
         loadTransactionsData()
 
-        // Check if we're in edit mode
         isEditMode = intent.getBooleanExtra("IS_EDIT_MODE", false)
         if (isEditMode) {
             currentTransactionId = intent.getStringExtra("TRANSACTION_ID") ?: ""
             loadTransactionDetails()
         }
 
-        // Set up UI for the appropriate mode
         setupUI()
 
-        // Set up click listeners
         setupClickListeners()
     }
 
@@ -96,21 +89,17 @@ class AddTransactionActivity : AppCompatActivity() {
     }
 
     private fun setupUI() {
-        // Set toolbar title
         toolbar.title = if (isEditMode) "Edit Transaction" else "Add Transaction"
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         toolbar.setNavigationOnClickListener { finish() }
 
-        // Show delete button only in edit mode
         btnDelete.visibility = if (isEditMode) View.VISIBLE else View.GONE
 
-        // Set today's date by default for new transactions
         if (!isEditMode) {
             etDate.setText(dateFormat.format(selectedDate))
         }
 
-        // Set default transaction type
         if (!isEditMode) {
             expenseChip.isChecked = true
             updateCategoryChips(expenseCategories)
@@ -118,7 +107,6 @@ class AddTransactionActivity : AppCompatActivity() {
     }
 
     private fun loadTransactionsData() {
-        // Get transactions from SharedPreferences
         val sharedPrefs = getSharedPreferences("finovate_transactions", MODE_PRIVATE)
         val transactionsJson = sharedPrefs.getString("transactions_data", null)
 
@@ -132,7 +120,6 @@ class AddTransactionActivity : AppCompatActivity() {
     private fun loadTransactionDetails() {
         val transaction = transactionsList.find { it.id == currentTransactionId }
         if (transaction != null) {
-            // Fill in details
             etTitle.setText(transaction.title)
             etAmount.setText(transaction.amount.toString())
             selectedDate = transaction.date
@@ -141,7 +128,6 @@ class AddTransactionActivity : AppCompatActivity() {
             transactionType = transaction.type
             selectedCategory = transaction.category
 
-            // Set transaction type
             if (transaction.type == TransactionType.INCOME) {
                 incomeChip.isChecked = true
                 updateCategoryChips(incomeCategories)
@@ -150,7 +136,6 @@ class AddTransactionActivity : AppCompatActivity() {
                 updateCategoryChips(expenseCategories)
             }
 
-            // Select the correct category chip
             for (i in 0 until categoryChipGroup.childCount) {
                 val chip = categoryChipGroup.getChildAt(i) as Chip
                 if (chip.text == selectedCategory) {
@@ -162,12 +147,10 @@ class AddTransactionActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
-        // Date selection
         etDate.setOnClickListener {
             showDatePicker()
         }
 
-        // Transaction type selection
         typeChipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
             if (checkedIds.isNotEmpty()) {
                 when (checkedIds[0]) {
@@ -183,7 +166,6 @@ class AddTransactionActivity : AppCompatActivity() {
             }
         }
 
-        // Category selection
         categoryChipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
             if (checkedIds.isNotEmpty()) {
                 val chip = findViewById<Chip>(checkedIds[0])
@@ -193,19 +175,16 @@ class AddTransactionActivity : AppCompatActivity() {
             }
         }
 
-        // Save button
         btnSave.setOnClickListener {
             if (validateInputs()) {
                 saveTransaction()
             }
         }
 
-        // Cancel button
         btnCancel.setOnClickListener {
             finish()
         }
 
-        // Delete button
         btnDelete.setOnClickListener {
             deleteTransaction()
         }
@@ -234,17 +213,14 @@ class AddTransactionActivity : AppCompatActivity() {
     }
 
     private fun updateCategoryChips(categories: List<String>) {
-        // Clear existing chips
         categoryChipGroup.removeAllViews()
 
-        // Add new category chips
         for (category in categories) {
             val chip = Chip(this)
             chip.text = category
             chip.isCheckable = true
             chip.isCheckedIconVisible = true
 
-            // If we're in edit mode and this is the selected category, check it
             if (category == selectedCategory) {
                 chip.isChecked = true
             }
@@ -256,7 +232,6 @@ class AddTransactionActivity : AppCompatActivity() {
     private fun validateInputs(): Boolean {
         var isValid = true
 
-        // Validate title
         if (etTitle.text.isNullOrBlank()) {
             titleInputLayout.error = "Title is required"
             isValid = false
@@ -264,7 +239,6 @@ class AddTransactionActivity : AppCompatActivity() {
             titleInputLayout.error = null
         }
 
-        // Validate amount
         if (etAmount.text.isNullOrBlank()) {
             amountInputLayout.error = "Amount is required"
             isValid = false
@@ -283,7 +257,6 @@ class AddTransactionActivity : AppCompatActivity() {
             }
         }
 
-        // Validate category
         if (selectedCategory.isBlank()) {
             Toast.makeText(this, "Please select a category", Toast.LENGTH_SHORT).show()
             isValid = false
@@ -298,7 +271,6 @@ class AddTransactionActivity : AppCompatActivity() {
         val notes = etNotes.text.toString()
 
         if (isEditMode) {
-            // Update existing transaction
             val index = transactionsList.indexOfFirst { it.id == currentTransactionId }
             if (index != -1) {
                 transactionsList[index] = Transaction(
@@ -312,7 +284,6 @@ class AddTransactionActivity : AppCompatActivity() {
                 )
             }
         } else {
-            // Create new transaction
             val newTransaction = Transaction(
                 id = UUID.randomUUID().toString(),
                 title = title,
@@ -325,23 +296,18 @@ class AddTransactionActivity : AppCompatActivity() {
             transactionsList.add(newTransaction)
         }
 
-        // Save updated list to SharedPreferences
         saveTransactionsToPrefs()
 
-        // Set result and finish
         setResult(RESULT_OK)
         finish()
     }
 
     private fun deleteTransaction() {
         if (isEditMode) {
-            // Remove transaction from list
             transactionsList.removeIf { it.id == currentTransactionId }
 
-            // Save updated list to SharedPreferences
             saveTransactionsToPrefs()
 
-            // Set result and finish
             setResult(RESULT_OK)
             finish()
         }

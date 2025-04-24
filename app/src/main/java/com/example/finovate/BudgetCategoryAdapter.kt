@@ -1,6 +1,7 @@
 package com.example.finovate
 
 import android.content.res.ColorStateList
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,6 +18,8 @@ class BudgetCategoryAdapter(
     private val onEditClick: (BudgetCategory) -> Unit
 ) : RecyclerView.Adapter<BudgetCategoryAdapter.ViewHolder>() {
 
+    private val TAG = "BudgetCategoryAdapter"
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_budget_category, parent, false)
@@ -24,8 +27,12 @@ class BudgetCategoryAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val category = categories[position]
-        holder.bind(category)
+        try {
+            val category = categories[position]
+            holder.bind(category)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error binding view holder at position $position", e)
+        }
     }
 
     override fun getItemCount() = categories.size
@@ -40,45 +47,70 @@ class BudgetCategoryAdapter(
         private val btnEditCategory: ImageView = itemView.findViewById(R.id.btnEditCategory)
 
         fun bind(category: BudgetCategory) {
-            tvCategoryName.text = category.name
-            tvBudgetAmount.text = currencyFormat.format(category.budget)
-            tvSpentAmount.text = "Spent: ${currencyFormat.format(category.spent)}"
+            try {
+                tvCategoryName.text = category.name
+                tvBudgetAmount.text = currencyFormat.format(category.budget)
+                tvSpentAmount.text = "Spent: ${currencyFormat.format(category.spent)}"
 
-            val remaining = category.budget - category.spent
-            tvRemainingAmount.text = "Left: ${currencyFormat.format(remaining)}"
+                val remaining = category.budget - category.spent
+                tvRemainingAmount.text = "Left: ${currencyFormat.format(remaining)}"
 
-            // Set progress bar
-            val progress = if (category.budget > 0) {
-                (category.spent / category.budget * 100).toInt()
-            } else {
-                0
-            }
-            progressBar.progress = progress
+                val progress = if (category.budget > 0) {
+                    ((category.spent / category.budget) * 100).toInt().coerceIn(0, 100)
+                } else {
+                    0
+                }
+                progressBar.progress = progress
 
-            // Set progress bar color based on budget status
-            if (progress > 90) {
-                progressBar.progressTintList = ColorStateList.valueOf(
-                    ContextCompat.getColor(itemView.context, R.color.expense_red)
-                )
-            } else if (progress > 75) {
-                progressBar.progressTintList = ColorStateList.valueOf(
-                    ContextCompat.getColor(itemView.context, R.color.warning_orange)
-                )
-            } else {
-                progressBar.progressTintList = ColorStateList.valueOf(
-                    ContextCompat.getColor(itemView.context, R.color.primary)
-                )
-            }
+                try {
+                    val progressColor = when {
+                        progress > 90 -> R.color.expense_red
+                        progress > 75 -> R.color.warning_orange
+                        else -> R.color.primary
+                    }
+                    progressBar.progressTintList = ColorStateList.valueOf(
+                        ContextCompat.getColor(itemView.context, progressColor)
+                    )
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error setting progress color", e)
+                }
 
-            // Set category icon
-            ivCategoryIcon.setImageResource(category.iconResId)
-            ivCategoryIcon.imageTintList = ColorStateList.valueOf(
-                ContextCompat.getColor(itemView.context, category.colorResId)
-            )
+                try {
+                    var iconResource = R.drawable.ic_category
 
-            // Set edit button click listener
-            btnEditCategory.setOnClickListener {
-                onEditClick(category)
+                    when (category.name.lowercase()) {
+                        "food" -> iconResource = R.drawable.ic_food
+                        "bills" -> iconResource = R.drawable.ic_bills
+                        "transport" -> iconResource = R.drawable.ic_transport
+                        "shopping" -> iconResource = R.drawable.ic_shopping
+                        "entertainment" -> iconResource = R.drawable.ic_entertainment
+                        "health" -> iconResource = R.drawable.ic_health
+                        "other" -> iconResource = R.drawable.ic_category
+                        else -> iconResource = if (category.iconResId != 0) category.iconResId else R.drawable.ic_category
+                    }
+
+                    ivCategoryIcon.setImageResource(iconResource)
+
+                    val categoryColor = ContextCompat.getColor(
+                        itemView.context,
+                        category.colorResId.takeIf { it != 0 } ?: R.color.primary
+                    )
+                    ivCategoryIcon.imageTintList = ColorStateList.valueOf(categoryColor)
+
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error setting category icon for ${category.name}", e)
+                    // Fallback to generic icon
+                    ivCategoryIcon.setImageResource(R.drawable.ic_category)
+                    ivCategoryIcon.imageTintList = ColorStateList.valueOf(
+                        ContextCompat.getColor(itemView.context, R.color.primary)
+                    )
+                }
+
+                btnEditCategory.setOnClickListener {
+                    onEditClick(category)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error binding category data", e)
             }
         }
     }

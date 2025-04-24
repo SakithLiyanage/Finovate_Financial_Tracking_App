@@ -35,7 +35,6 @@ class ReportsActivity : AppCompatActivity() {
 
     private val TAG = "ReportsActivity"
 
-    // UI Elements
     private lateinit var tvTotalIncome: TextView
     private lateinit var tvTotalExpenses: TextView
     private lateinit var tvNetBalance: TextView
@@ -45,14 +44,11 @@ class ReportsActivity : AppCompatActivity() {
     private lateinit var btnImportData: MaterialButton
     private lateinit var bottomNavigationView: BottomNavigationView
 
-    // Data
     private var transactionsList = ArrayList<Transaction>()
     private var categorySummaries = ArrayList<CategorySummary>()
 
-    // Currency formatter for LKR
     private val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US)
 
-    // Create document launcher for exports
     private val createJsonDocument = registerForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
@@ -65,7 +61,6 @@ class ReportsActivity : AppCompatActivity() {
         uri?.let { exportToText(it) }
     }
 
-    // Open document launcher for imports
     private val openJsonDocument = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -77,28 +72,20 @@ class ReportsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_reports)
 
         try {
-            // Configure currency formatter
             configureCurrencyFormatter()
 
-            // Initialize views
             initViews()
 
-            // Load data
             loadTransactions()
 
-            // Analyze data
             analyzeTransactions()
 
-            // Setup category summary
             setupCategorySummaryList()
 
-            // Update financial summary
             updateFinancialSummary()
 
-            // Setup click listeners
             setupClickListeners()
 
-            // Setup bottom navigation
             setupBottomNavigation()
 
         } catch (e: Exception) {
@@ -119,26 +106,21 @@ class ReportsActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        // Financial summary views
         tvTotalIncome = findViewById(R.id.tvTotalIncome)
         tvTotalExpenses = findViewById(R.id.tvTotalExpenses)
         tvNetBalance = findViewById(R.id.tvNetBalance)
 
-        // Category summary recycler view
         rvCategorySummary = findViewById(R.id.rvCategorySummary)
 
-        // Data management buttons
         btnExportJson = findViewById(R.id.btnExportJson)
         btnExportText = findViewById(R.id.btnExportText)
         btnImportData = findViewById(R.id.btnImportData)
 
-        // Bottom navigation
         bottomNavigationView = findViewById(R.id.bottomNavigationView)
     }
 
     private fun loadTransactions() {
         try {
-            // Load transactions from SharedPreferences
             val sharedPrefs = getSharedPreferences("finovate_transactions", MODE_PRIVATE)
             val transactionsJson = sharedPrefs.getString("transactions_data", null)
 
@@ -161,15 +143,12 @@ class ReportsActivity : AppCompatActivity() {
 
     private fun analyzeTransactions() {
         try {
-            // Category totals for expenses
             val categoryExpenses = HashMap<String, Double>()
             val categoryIcons = HashMap<String, Int>()
             val categoryColors = HashMap<String, Int>()
 
-            // Setup default category icons and colors
             setupCategoryDefaults(categoryIcons, categoryColors)
 
-            // Calculate category totals
             for (transaction in transactionsList) {
                 if (transaction.type == TransactionType.EXPENSE) {
                     val category = transaction.category
@@ -178,7 +157,6 @@ class ReportsActivity : AppCompatActivity() {
                 }
             }
 
-            // Create category summaries
             categorySummaries.clear()
             for ((category, amount) in categoryExpenses) {
                 categorySummaries.add(
@@ -191,7 +169,6 @@ class ReportsActivity : AppCompatActivity() {
                 )
             }
 
-            // Sort by amount (highest first)
             categorySummaries.sortByDescending { it.amount }
 
         } catch (e: Exception) {
@@ -203,7 +180,6 @@ class ReportsActivity : AppCompatActivity() {
         categoryIcons: HashMap<String, Int>,
         categoryColors: HashMap<String, Int>
     ) {
-        // Add mappings for common categories
         categoryIcons["Food"] = R.drawable.ic_food
         categoryColors["Food"] = R.color.category_food
 
@@ -244,7 +220,6 @@ class ReportsActivity : AppCompatActivity() {
             var totalIncome = 0.0
             var totalExpense = 0.0
 
-            // Calculate totals
             for (transaction in transactionsList) {
                 if (transaction.type == TransactionType.INCOME) {
                     totalIncome += transaction.amount
@@ -253,14 +228,12 @@ class ReportsActivity : AppCompatActivity() {
                 }
             }
 
-            // Update UI
             tvTotalIncome.text = currencyFormatter.format(totalIncome)
             tvTotalExpenses.text = currencyFormatter.format(totalExpense)
 
             val netBalance = totalIncome - totalExpense
             tvNetBalance.text = currencyFormatter.format(netBalance)
 
-            // Set net balance color
             if (netBalance >= 0) {
                 tvNetBalance.setTextColor(ContextCompat.getColor(this, R.color.income_green))
             } else {
@@ -273,12 +246,10 @@ class ReportsActivity : AppCompatActivity() {
 
     private fun setupClickListeners() {
         try {
-            // Back button
             findViewById<ImageView>(R.id.btnBack).setOnClickListener {
                 finish()
             }
 
-            // Export as JSON button
             btnExportJson.setOnClickListener {
                 if (transactionsList.isEmpty()) {
                     Toast.makeText(this, "No transactions to export", Toast.LENGTH_SHORT).show()
@@ -290,7 +261,6 @@ class ReportsActivity : AppCompatActivity() {
                 createJsonDocument.launch(filename)
             }
 
-            // Export as Text button
             btnExportText.setOnClickListener {
                 if (transactionsList.isEmpty()) {
                     Toast.makeText(this, "No transactions to export", Toast.LENGTH_SHORT).show()
@@ -302,7 +272,6 @@ class ReportsActivity : AppCompatActivity() {
                 createTextDocument.launch(filename)
             }
 
-            // Import data button
             btnImportData.setOnClickListener {
                 openJsonDocument.launch(arrayOf("application/json"))
             }
@@ -313,7 +282,6 @@ class ReportsActivity : AppCompatActivity() {
 
     private fun setupBottomNavigation() {
         try {
-            // Set Reports as selected
             bottomNavigationView.selectedItemId = R.id.nav_reports
 
             bottomNavigationView.setOnItemSelectedListener { menuItem ->
@@ -334,7 +302,6 @@ class ReportsActivity : AppCompatActivity() {
                         true
                     }
                     R.id.nav_reports -> {
-                        // Already on reports
                         true
                     }
                     else -> false
@@ -369,7 +336,6 @@ class ReportsActivity : AppCompatActivity() {
                 outputText.append("Date: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())}\n")
                 outputText.append("Total Transactions: ${transactionsList.size}\n\n")
 
-                // Add summary
                 var totalIncome = 0.0
                 var totalExpense = 0.0
 
@@ -389,10 +355,8 @@ class ReportsActivity : AppCompatActivity() {
                 outputText.append("TRANSACTIONS:\n")
                 outputText.append("---------------------------------------------------\n")
 
-                // Format for date
                 val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
-                // Add each transaction
                 for (transaction in transactionsList.sortedByDescending { it.date }) {
                     outputText.append("Date: ${dateFormat.format(transaction.date)}\n")
                     outputText.append("Type: ${transaction.type}\n")
@@ -429,7 +393,6 @@ class ReportsActivity : AppCompatActivity() {
 
             val jsonString = stringBuilder.toString()
 
-            // Validate JSON format
             try {
                 val type = object : TypeToken<ArrayList<Transaction>>() {}.type
                 val importedTransactions: ArrayList<Transaction> = Gson().fromJson(jsonString, type)
@@ -439,16 +402,13 @@ class ReportsActivity : AppCompatActivity() {
                     return
                 }
 
-                // Ask for confirmation
                 AlertDialog.Builder(this)
                     .setTitle("Import Data")
                     .setMessage("This will replace your current transaction data with ${importedTransactions.size} transactions from the backup. Do you want to continue?")
                     .setPositiveButton("Import") { _, _ ->
-                        // Replace the current transactions
                         saveTransactions(importedTransactions)
                         Toast.makeText(this, "Data imported successfully", Toast.LENGTH_SHORT).show()
 
-                        // Reload the data and refresh UI
                         loadTransactions()
                         analyzeTransactions()
                         setupCategorySummaryList()

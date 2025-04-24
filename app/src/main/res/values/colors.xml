@@ -39,6 +39,8 @@
     <color name="background_light">#F5F5F5</color>
     <color name="divider">#E0E0E0</color>
 
+
+    <color name="unread_notification_bg">#E3F2FD</color>
     <!-- System colors -->
     <color name="background">#FFFFFF</color>
     <color name="white">#FFFFFF</color>

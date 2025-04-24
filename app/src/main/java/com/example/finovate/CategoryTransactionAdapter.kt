@@ -74,7 +74,6 @@ class CategoryTransactionAdapter(
         fun bind(item: TransactionListItem.CategoryHeader) {
             tvCategoryName.text = item.category
 
-            // Format and color the total amount
             val formattedAmount = currencyFormat.format(Math.abs(item.totalAmount))
 
             if (item.totalAmount >= 0) {
@@ -85,11 +84,9 @@ class CategoryTransactionAdapter(
                 tvCategoryTotal.text = "- $formattedAmount"
             }
 
-            // Set category icon based on category name
             val iconResId = getCategoryIcon(item.category)
             categoryIcon.setImageResource(iconResId)
 
-            // Set icon tint
             val colorResId = getCategoryColor(item.category)
             categoryIcon.imageTintList = ColorStateList.valueOf(
                 ContextCompat.getColor(itemView.context, colorResId)
@@ -146,7 +143,6 @@ class CategoryTransactionAdapter(
                 tvAmount.text = "- $formattedAmount"
             }
 
-            // Set click listeners
             itemView.setOnClickListener {
                 onItemClick(transaction)
             }

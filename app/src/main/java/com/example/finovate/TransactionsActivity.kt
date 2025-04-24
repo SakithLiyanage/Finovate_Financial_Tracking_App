@@ -33,18 +33,14 @@ class TransactionsActivity : AppCompatActivity() {
     private var transactionsList = ArrayList<Transaction>()
     private lateinit var adapter: CategoryTransactionAdapter
 
-    // Currency formatter for LKR
     private val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US)
 
-    // Filter state
     private var currentFilter = FilterType.ALL
 
-    // Activity result handler for adding/editing transactions
     private val addTransactionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            // Refresh transactions after add/edit
             loadTransactions()
             updateFilterView()
         }
@@ -54,22 +50,16 @@ class TransactionsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_transactions)
 
-        // Configure currency formatter for LKR
         configureCurrencyFormatter()
 
-        // Initialize views
         initViews()
 
-        // Set up transactions list
         setupTransactionsList()
 
-        // Load transactions
         loadTransactions()
 
-        // Set up click listeners
         setupClickListeners()
 
-        // Set up bottom navigation
         setupBottomNavigation()
     }
 
@@ -94,11 +84,9 @@ class TransactionsActivity : AppCompatActivity() {
     }
 
     private fun setupTransactionsList() {
-        // Set up adapter for categorized transactions
         adapter = CategoryTransactionAdapter(
             currencyFormat = currencyFormatter,
             onItemClick = { transaction ->
-                // Open edit transaction screen
                 val intent = Intent(this, AddTransactionActivity::class.java)
                 intent.putExtra("TRANSACTION_ID", transaction.id)
                 intent.putExtra("IS_EDIT_MODE", true)
@@ -109,13 +97,11 @@ class TransactionsActivity : AppCompatActivity() {
             }
         )
 
-        // Set up RecyclerView
         transactionsRecyclerView.layoutManager = LinearLayoutManager(this)
         transactionsRecyclerView.adapter = adapter
     }
 
     private fun loadTransactions() {
-        // Get transactions from SharedPreferences
         val sharedPrefs = getSharedPreferences("finovate_transactions", MODE_PRIVATE)
         val transactionsJson = sharedPrefs.getString("transactions_data", null)
 
@@ -127,28 +113,22 @@ class TransactionsActivity : AppCompatActivity() {
             transactionsList.addAll(loadedList)
         }
 
-        // Apply current filter
         updateFilteredList()
     }
 
     private fun updateFilteredList() {
-        // Create filtered list based on current filter
         val filteredList = when (currentFilter) {
             FilterType.ALL -> transactionsList
             FilterType.INCOME -> transactionsList.filter { it.type == TransactionType.INCOME }
             FilterType.EXPENSE -> transactionsList.filter { it.type == TransactionType.EXPENSE }
         }
 
-        // Sort by date (most recent first)
         val sortedList = filteredList.sortedByDescending { it.date }
 
-        // Group by category
         val groupedTransactions = groupTransactionsByCategory(sortedList)
 
-        // Update adapter
         adapter.updateTransactions(groupedTransactions)
 
-        // Show/hide empty state
         if (sortedList.isEmpty()) {
             emptyStateView.visibility = View.VISIBLE
             when (currentFilter) {
@@ -164,12 +144,9 @@ class TransactionsActivity : AppCompatActivity() {
     private fun groupTransactionsByCategory(transactions: List<Transaction>): List<TransactionListItem> {
         val result = mutableListOf<TransactionListItem>()
 
-        // Group by category
         val groupedByCategory = transactions.groupBy { it.category }
 
-        // For each category, add a header followed by transactions
         groupedByCategory.forEach { (category, transactionsInCategory) ->
-            // Add category header
             result.add(TransactionListItem.CategoryHeader(
                 category = category,
                 totalAmount = transactionsInCategory.sumOf {
@@ -177,7 +154,6 @@ class TransactionsActivity : AppCompatActivity() {
                 }
             ))
 
-            // Add transactions for this category
             transactionsInCategory.forEach { transaction ->
                 result.add(TransactionListItem.TransactionItem(transaction))
             }
@@ -187,34 +163,28 @@ class TransactionsActivity : AppCompatActivity() {
     }
 
     private fun updateFilterView() {
-        // Update filter button styles
         filterAllBtn.isSelected = currentFilter == FilterType.ALL
         filterIncomeBtn.isSelected = currentFilter == FilterType.INCOME
         filterExpenseBtn.isSelected = currentFilter == FilterType.EXPENSE
 
-        // Update filtered list
         updateFilteredList()
     }
 
     private fun setupClickListeners() {
-        // Back button
         btnBack.setOnClickListener {
             finish()
         }
 
-        // Add transaction button in toolbar
         btnAddTransaction.setOnClickListener {
             val intent = Intent(this, AddTransactionActivity::class.java)
             addTransactionLauncher.launch(intent)
         }
 
-        // Add transaction FAB
         fabAddTransaction.setOnClickListener {
             val intent = Intent(this, AddTransactionActivity::class.java)
             addTransactionLauncher.launch(intent)
         }
 
-        // Filter buttons
         filterAllBtn.setOnClickListener {
             currentFilter = FilterType.ALL
             updateFilterView()
@@ -232,7 +202,6 @@ class TransactionsActivity : AppCompatActivity() {
     }
 
     private fun setupBottomNavigation() {
-        // Set Transactions as selected
         bottomNavigationView.selectedItemId = R.id.nav_transactions
 
         bottomNavigationView.setOnItemSelectedListener { menuItem ->
@@ -262,13 +231,10 @@ class TransactionsActivity : AppCompatActivity() {
     }
 
     private fun deleteTransaction(transaction: Transaction) {
-        // Remove transaction from list
         transactionsList.removeIf { it.id == transaction.id }
 
-        // Save updated list to SharedPreferences
         saveTransactionsToPrefs()
 
-        // Update the view
         updateFilteredList()
     }
 

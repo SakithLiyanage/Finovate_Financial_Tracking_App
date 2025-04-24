@@ -12,9 +12,7 @@ data class Transaction(
     val notes: String? = null
 )
 
-/**
- * Enum defining the types of transactions
- */
+
 enum class TransactionType {
     INCOME,
     EXPENSE

@@ -21,10 +21,7 @@ import com.google.gson.reflect.TypeToken
 import java.text.NumberFormat
 import java.util.*
 
-/**
- * BudgetActivity manages the user's budget settings, including total monthly budget,
- * category-specific budgets, and displays spending progress against these budgets.
- */
+
 class BudgetActivity : AppCompatActivity() {
 
     private val TAG = "BudgetActivity"
@@ -39,23 +36,19 @@ class BudgetActivity : AppCompatActivity() {
     private lateinit var fabAddBudget: FloatingActionButton
     private lateinit var monthSelector: TextView
 
-    // Currency formatter for LKR
     private val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US)
 
-    // Budget data
     private var monthlyBudget: Double = 0.00
     private var totalSpent: Double = 0.0
     private var budgetCategories = ArrayList<BudgetCategory>()
     private var transactionsList = ArrayList<Transaction>()
 
-    // Current month
     private val calendar = Calendar.getInstance()
     private val currentMonth = calendar.get(Calendar.MONTH)
     private val currentYear = calendar.get(Calendar.YEAR)
     private var selectedMonth = currentMonth
     private var selectedYear = currentYear
 
-    // Flag to prevent triggering update loops between slider and text field
     private var isUpdatingFromSlider = false
     private var isUpdatingFromText = false
 
@@ -64,29 +57,22 @@ class BudgetActivity : AppCompatActivity() {
         setContentView(R.layout.activity_budget)
 
         try {
-            // Configure currency formatter for LKR
             configureCurrencyFormatter()
 
-            // Initialize views
             initViews()
 
-            // Load data
             loadBudgetData()
             loadTransactions()
 
-            // Calculate spending
             calculateSpending()
 
-            // Set up UI
             setupMonthSelector()
             updateMonthSelectorText()
             setupBudgetCategoriesList()
             updateUI()
 
-            // Set up click listeners
             setupClickListeners()
 
-            // Set up bottom navigation
             setupBottomNavigation()
 
         } catch (e: Exception) {
@@ -120,12 +106,10 @@ class BudgetActivity : AppCompatActivity() {
 
     private fun loadBudgetData() {
         try {
-            // Load monthly budget from SharedPreferences
             val sharedPrefs = getSharedPreferences("finovate_budget", MODE_PRIVATE)
             monthlyBudget = sharedPrefs.getFloat("monthly_budget", 00.00f).toDouble()
             Log.d(TAG, "Loaded monthly budget: $monthlyBudget LKR")
 
-            // Load budget categories
             val budgetCategoriesJson = sharedPrefs.getString("budget_categories", null)
 
             if (!budgetCategoriesJson.isNullOrEmpty()) {
@@ -135,17 +119,14 @@ class BudgetActivity : AppCompatActivity() {
                     Log.d(TAG, "Loaded ${budgetCategories.size} budget categories")
                 } catch (e: Exception) {
                     Log.e(TAG, "Error parsing budget categories JSON", e)
-                    // Create default categories if there's an error parsing JSON
                     createDefaultBudgetCategories()
                 }
             } else {
                 Log.d(TAG, "No budget categories found, creating defaults")
-                // Create default budget categories if none exist
                 createDefaultBudgetCategories()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error loading budget data", e)
-            // Create default categories if there's an error
             createDefaultBudgetCategories()
         }
     }
@@ -162,18 +143,15 @@ class BudgetActivity : AppCompatActivity() {
                 BudgetCategory("Other", 0.00, R.color.category_other, R.drawable.ic_category)
             )
 
-            // Save default categories
             saveBudgetCategories()
         } catch (e: Exception) {
             Log.e(TAG, "Error creating default categories", e)
-            // Create an empty list if all else fails
             budgetCategories = ArrayList()
         }
     }
 
     private fun loadTransactions() {
         try {
-            // Load transactions from SharedPreferences
             val sharedPrefs = getSharedPreferences("finovate_transactions", MODE_PRIVATE)
             val transactionsJson = sharedPrefs.getString("transactions_data", null)
 
@@ -184,7 +162,6 @@ class BudgetActivity : AppCompatActivity() {
                     val type = object : TypeToken<ArrayList<Transaction>>() {}.type
                     val allTransactions: ArrayList<Transaction> = Gson().fromJson(transactionsJson, type)
 
-                    // Filter transactions by selected month and year
                     transactionsList.addAll(allTransactions.filter {
                         try {
                             val transactionCalendar = Calendar.getInstance()
@@ -192,7 +169,6 @@ class BudgetActivity : AppCompatActivity() {
                             transactionCalendar.get(Calendar.MONTH) == selectedMonth &&
                                     transactionCalendar.get(Calendar.YEAR) == selectedYear
                         } catch (e: Exception) {
-                            // Skip transactions with invalid dates
                             Log.e(TAG, "Error with transaction date", e)
                             false
                         }
@@ -215,15 +191,12 @@ class BudgetActivity : AppCompatActivity() {
         try {
             totalSpent = 0.0
 
-            // Reset spent amount for all categories
             budgetCategories.forEach { it.spent = 0.0 }
 
-            // Calculate spending for each category
             for (transaction in transactionsList) {
                 if (transaction.type == TransactionType.EXPENSE) {
                     totalSpent += transaction.amount
 
-                    // Add to category spending
                     var categoryFound = false
                     for (category in budgetCategories) {
                         if (category.name.equals(transaction.category, ignoreCase = true)) {
@@ -233,7 +206,6 @@ class BudgetActivity : AppCompatActivity() {
                         }
                     }
 
-                    // If category not found, add to "Other"
                     if (!categoryFound) {
                         val otherCategory = budgetCategories.find { it.name.equals("Other", ignoreCase = true) }
                         if (otherCategory != null) {
@@ -266,7 +238,6 @@ class BudgetActivity : AppCompatActivity() {
             val nextMonthBtn = findViewById<ImageView>(R.id.btnNextMonth)
 
             prevMonthBtn.setOnClickListener {
-                // Go to previous month
                 if (selectedMonth == 0) {
                     selectedMonth = 11
                     selectedYear--
@@ -280,9 +251,7 @@ class BudgetActivity : AppCompatActivity() {
             }
 
             nextMonthBtn.setOnClickListener {
-                // Go to next month (only up to current month)
                 if (selectedMonth == currentMonth && selectedYear == currentYear) {
-                    // Already at current month, do nothing
                     Toast.makeText(this, "Cannot view future months", Toast.LENGTH_SHORT).show()
                 } else {
                     if (selectedMonth == 11) {
@@ -333,20 +302,16 @@ class BudgetActivity : AppCompatActivity() {
 
     private fun updateUI() {
         try {
-            // Update total budget
             tvTotalBudget.text = currencyFormatter.format(monthlyBudget)
 
-            // Update used and remaining amounts
             tvBudgetUsed.text = "${currencyFormatter.format(totalSpent)} used"
             val remaining = monthlyBudget - totalSpent
             tvBudgetRemaining.text = "${currencyFormatter.format(remaining)} remaining"
 
-            // Update progress bar
             val progressPercentage = if (monthlyBudget > 0) (totalSpent / monthlyBudget * 100).toInt() else 0
             val safeProgressPercentage = progressPercentage.coerceIn(0, 100)
             budgetProgressBar.progress = safeProgressPercentage
 
-            // Set progress bar color based on budget status
             try {
                 if (progressPercentage > 90) {
                     budgetProgressBar.progressDrawable = getDrawable(R.drawable.progress_bar_red)
@@ -357,10 +322,8 @@ class BudgetActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error setting progress bar color", e)
-                // Use default drawable if there's an error
             }
 
-            // Update RecyclerView
             try {
                 budgetCategoriesRecyclerView.adapter?.notifyDataSetChanged()
             } catch (e: Exception) {
@@ -373,17 +336,14 @@ class BudgetActivity : AppCompatActivity() {
 
     private fun setupClickListeners() {
         try {
-            // Back button
             btnBack.setOnClickListener {
                 finish()
             }
 
-            // Add new budget category button
             fabAddBudget.setOnClickListener {
                 showAddBudgetDialog()
             }
 
-            // Edit total budget
             val btnEditTotal = findViewById<ImageView>(R.id.btnEditTotalBudget)
             btnEditTotal.setOnClickListener {
                 showEditTotalBudgetDialog()
@@ -395,7 +355,6 @@ class BudgetActivity : AppCompatActivity() {
 
     private fun setupBottomNavigation() {
         try {
-            // Set Budget as selected
             bottomNavigationView.selectedItemId = R.id.nav_budget
 
             bottomNavigationView.setOnItemSelectedListener { menuItem ->
@@ -434,7 +393,6 @@ class BudgetActivity : AppCompatActivity() {
             Log.d(TAG, "Opening edit total budget dialog")
             val dialogView = layoutInflater.inflate(R.layout.dialog_edit_total_budget, null)
 
-            // Get references to views
             val slider = dialogView.findViewById<Slider>(R.id.budgetSlider)
             val etAmount = dialogView.findViewById<TextInputEditText>(R.id.etTotalBudgetAmount)
 
@@ -444,16 +402,13 @@ class BudgetActivity : AppCompatActivity() {
                 return
             }
 
-            // Set initial values - give slider a wide range to accommodate any value
             val maxBudgetValue = Math.max(1000000f, (monthlyBudget * 2).toFloat())
             slider.valueTo = maxBudgetValue
             slider.valueFrom = 0f // Allow 0 budget if needed
             slider.value = monthlyBudget.toFloat().coerceIn(0f, maxBudgetValue)
 
-            // Set current value in text field
             etAmount.setText(monthlyBudget.toInt().toString())
 
-            // Update text field when slider changes
             slider.addOnChangeListener { _, value, fromUser ->
                 if (fromUser && !isUpdatingFromText) {
                     try {
@@ -466,7 +421,6 @@ class BudgetActivity : AppCompatActivity() {
                 }
             }
 
-            // Update slider when text changes
             etAmount.addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
@@ -503,11 +457,8 @@ class BudgetActivity : AppCompatActivity() {
                 .setNegativeButton("Cancel", null)
                 .create()
 
-            // Show the dialog
             dialog.show()
 
-            // Set the positive button click listener after showing the dialog
-            // This prevents automatic dialog dismissal on error
             dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 try {
                     val budgetText = etAmount.text.toString()
@@ -523,13 +474,11 @@ class BudgetActivity : AppCompatActivity() {
                         return@setOnClickListener
                     }
 
-                    // Validate budget amount
                     if (newBudget < 0) {
                         Toast.makeText(this, "Budget cannot be negative", Toast.LENGTH_SHORT).show()
                         return@setOnClickListener
                     }
 
-                    // Update monthly budget
                     monthlyBudget = newBudget
                     saveTotalBudget()
                     updateUI()
@@ -562,19 +511,16 @@ class BudgetActivity : AppCompatActivity() {
 
             dialog.show()
 
-            // Set positive button click listener after showing dialog
             dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 try {
                     val categoryName = categoryInput.text.toString()
                     val amountText = amountInput.text.toString()
 
-                    // Validate input
                     if (categoryName.isBlank()) {
                         Toast.makeText(this, "Please enter a category name", Toast.LENGTH_SHORT).show()
                         return@setOnClickListener
                     }
 
-                    // Check if category already exists
                     if (budgetCategories.any { it.name.equals(categoryName, ignoreCase = true) }) {
                         Toast.makeText(this, "Category already exists", Toast.LENGTH_SHORT).show()
                         return@setOnClickListener
@@ -592,7 +538,6 @@ class BudgetActivity : AppCompatActivity() {
                         return@setOnClickListener
                     }
 
-                    // Add new category
                     budgetCategories.add(
                         BudgetCategory(
                             categoryName,
@@ -624,7 +569,6 @@ class BudgetActivity : AppCompatActivity() {
             Log.d(TAG, "Opening edit budget dialog for category: ${category.name}")
             val dialogView = layoutInflater.inflate(R.layout.dialog_edit_budget_category, null)
 
-            // Find views in the dialog
             val slider = dialogView.findViewById<Slider>(R.id.categoryBudgetSlider)
             val etAmount = dialogView.findViewById<TextInputEditText>(R.id.etCategoryBudgetAmount)
 
@@ -634,19 +578,15 @@ class BudgetActivity : AppCompatActivity() {
                 return
             }
 
-            // Set initial values with a large enough range
             val maxValue = Math.max(1000000f, (Math.max(category.budget, category.spent) * 2).toFloat())
             slider.valueTo = maxValue
             slider.valueFrom = 1000f  // Min 1,000 LKR
 
-            // Ensure the slider value is within the range
             val initialValue = category.budget.toFloat().coerceIn(slider.valueFrom, slider.valueTo)
             slider.value = initialValue
 
-            // Set current value in text field
             etAmount.setText(category.budget.toInt().toString())
 
-            // Update text field when slider changes
             slider.addOnChangeListener { _, value, fromUser ->
                 if (fromUser && !isUpdatingFromText) {
                     try {
@@ -659,7 +599,6 @@ class BudgetActivity : AppCompatActivity() {
                 }
             }
 
-            // Update slider when text changes
             etAmount.addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
@@ -673,12 +612,10 @@ class BudgetActivity : AppCompatActivity() {
                                 val value = text.toFloatOrNull() ?: slider.valueFrom
                                 isUpdatingFromText = true
 
-                                // If value exceeds slider range, update the range
                                 if (value > slider.valueTo) {
                                     slider.valueTo = value * 1.5f // Increase range by 50%
                                 }
 
-                                // Set the value, ensuring it's at least the minimum
                                 slider.value = value.coerceAtLeast(slider.valueFrom)
                                 isUpdatingFromText = false
                             }
@@ -699,7 +636,6 @@ class BudgetActivity : AppCompatActivity() {
 
             dialog.show()
 
-            // Set positive button listener after showing dialog
             dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 try {
                     val budgetText = etAmount.text.toString()
@@ -715,7 +651,6 @@ class BudgetActivity : AppCompatActivity() {
                         return@setOnClickListener
                     }
 
-                    // Validate budget amount (allow overspent budgets but warn)
                     if (newBudget <= 0) {
                         Toast.makeText(this, "Budget must be greater than 0", Toast.LENGTH_SHORT).show()
                         return@setOnClickListener
@@ -725,7 +660,6 @@ class BudgetActivity : AppCompatActivity() {
                         Toast.makeText(this, "Warning: Budget is less than spent amount", Toast.LENGTH_LONG).show()
                     }
 
-                    // Update category budget
                     category.budget = newBudget
                     saveBudgetCategories()
                     updateUI()
@@ -737,10 +671,8 @@ class BudgetActivity : AppCompatActivity() {
                 }
             }
 
-            // Set neutral (delete) button listener
             dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
                 try {
-                    // Confirm deletion with a new dialog
                     androidx.appcompat.app.AlertDialog.Builder(this)
                         .setTitle("Delete ${category.name} Budget?")
                         .setMessage("Are you sure you want to delete this budget category? This cannot be undone.")
@@ -796,7 +728,6 @@ class BudgetActivity : AppCompatActivity() {
         }
     }
 
-    // Handle configuration changes
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putInt("selectedMonth", selectedMonth)
@@ -808,7 +739,6 @@ class BudgetActivity : AppCompatActivity() {
         selectedMonth = savedInstanceState.getInt("selectedMonth", currentMonth)
         selectedYear = savedInstanceState.getInt("selectedYear", currentYear)
 
-        // Update UI with restored data
         updateMonthSelectorText()
         loadTransactions()
         calculateSpending()
